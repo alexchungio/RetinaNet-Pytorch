@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#------------------------------------------------------
+# @ File       : voc_process.py
+# @ Description:  
+# @ Author     : Alex Chung
+# @ Contact    : yonganzhong@outlook.com
+# @ License    : Copyright (c) 2017-2018
+# @ Time       : 2020/11/18 下午4:48
+# @ Software   : PyCharm
+#-------------------------------------------------------
+
+
+import os
+import argparse
+import xml.etree.ElementTree as ET
+from configs.cfgs import args
+
+def convert_voc_annotation(data_path, data_type, anno_path, use_difficult_bbox=True):
+
+    classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
+               'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse',
+               'motorbike', 'person', 'pottedplant', 'sheep', 'sofa',
+               'train', 'tvmonitor']
+    img_inds_file = os.path.join(data_path, 'ImageSets', 'Main', data_type + '.txt')
+    with open(img_inds_file, 'r') as f:
+        txt = f.readlines()
+        image_inds = [line.strip() for line in txt]
+
+    with open(anno_path, 'a') as f:
+        index = 0
+        for image_ind in image_inds:
+            image_path = os.path.join(data_path, 'JPEGImages', image_ind + '.jpg')
+            annotation = ''
+            label_path = os.path.join(data_path, 'Annotations', image_ind + '.xml')
+            root = ET.parse(label_path).getroot()
+            height = root.findtext("./size/height")
+            width = root.findtext("./size/width")
+            annotation += ' '.join([str(index), image_path, width, height])
+            for obj in root.findall('object'):
+                difficult = obj.find('difficult').text.strip()
+                if (not use_difficult_bbox) and(int(difficult) == 1):
+                    continue
+                bbox = obj.find('bndbox')
+                class_ind = classes.index(obj.find('name').text.lower().strip())
+                xmin = bbox.find('xmin').text.strip()
+                xmax = bbox.find('xmax').text.strip()
+                ymin = bbox.find('ymin').text.strip()
+                ymax = bbox.find('ymax').text.strip()
+                annotation += ' ' + ','.join([xmin, ymin, xmax, ymax, str(class_ind)])
+            print(annotation)
+            f.write(annotation + "\n")
+            index += 1
+    return len(image_inds)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_path", default=args.dataset_path)
+    parser.add_argument("--train_annotation", default=args.train_data)
+    parser.add_argument("--test_annotation", default=args.test_data)
+    flags = parser.parse_args()
+
+    os.makedirs(os.path.dirname(flags.train_annotation), exist_ok=True)
+
+    if os.path.exists(flags.train_annotation): os.remove(flags.train_annotation)
+    if os.path.exists(flags.test_annotation): os.remove(flags.test_annotation)
+
+    train_path_1 = os.path.join(flags.data_path, 'train', 'VOC2007')
+    train_path_2 = os.path.join(flags.data_path, 'train', 'VOC2012')
+    test_path_1 = os.path.join(flags.data_path, 'test', 'VOC2007')
+
+    num1 = convert_voc_annotation(train_path_1, 'trainval', flags.train_annotation, False)
+    num2 = convert_voc_annotation(train_path_2, 'trainval', flags.train_annotation, False)
+    num3 = convert_voc_annotation(test_path_1, 'test', flags.test_annotation, False)
+    print('=> The number of image for train is: %d\tThe number of image for test is:%d' % (num1 + num2, num3))
+
+
+if __name__ == '__main__':
+
+    main()
