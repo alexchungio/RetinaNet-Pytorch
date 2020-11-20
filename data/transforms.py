@@ -66,7 +66,7 @@ class Resizer(object):
         img = img.crop((0, 0, w_size + w_pad, h_size + h_pad))  # padding width
         annots[:, :4] *= scale
 
-        return {'img': img, 'annot': torch.tensor(annots), 'scale': scale}
+        return {'img': img, 'annot': torch.as_tensor(annots), 'scale': scale}
 
 
 class RandomCrop(object):
@@ -171,8 +171,35 @@ class RandomHorizonFlip(object):
             annots[:, 0] = xmin
             annots[:, 2] = xmax
 
-        return {'img': img, 'annot': torch.tensor(annots)}
+        return {'img': img, 'annot': torch.as_tensor(annots)}
 
+
+class Normalizer(object):
+
+    def __init__(self, mean, std):
+        if mean == None:
+            self.mean = torch.tensor([[[0.485, 0.456, 0.406]]])
+        else:
+            self.mean = torch.tensor([[mean]])
+
+        if std == None:
+            self.std = torch.tensor([[[0.229, 0.224, 0.225]]])
+        else:
+            self.std = torch.tensor([[std]])
+
+    def __call__(self, sample):
+
+        image, annots, scale = sample['img'], sample['annot'], sample['scale']
+
+        # convert to tensor
+        image = torch.as_tensor(np.array(image), dtype=torch.float32)
+        annots = torch.as_tensor(annots)
+        # convert to (0., 1.)
+        image = image / 255.
+
+        image = (image - self.mean) / self.std
+
+        return {'img':image, 'annot': annots, 'scale': scale}
 
 def test():
     from data.dataset import VOCDataset
@@ -187,17 +214,19 @@ def test():
     random_crop = RandomCrop()
     random_flip  = RandomHorizonFlip()
     resize = Resizer(min_side=608)
-
+    normalizer = Normalizer()
     crop_sample = random_crop(sample)
     flip_sample = random_flip(crop_sample)
     resize_sample = resize(flip_sample)
-
+    normalize_sample = normalizer(resize_sample)
 
     resize_img = draw_boxes(resize_sample['img'], resize_sample['annot'][:, :4])
     print(resize_sample['img'].size, resize_sample['annot'][:, :4])
     resize_img.show()
 
-    print(np.array(resize_sample['img'].new(mode='F')))
+    print('Done')
+
+
 
 
 
