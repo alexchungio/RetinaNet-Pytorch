@@ -113,10 +113,14 @@ class RandomCrop(object):
             x = (img.size[0] - w) // 2
             y = (img.size[1] - h) // 2
 
+
+        print(x)
         img = img.crop((x, y, x + w, y + h))
-        annots -= [x,y,x,y, 0]
-        annots[:, 0::2].clip(min=0, max=w - 1)
-        annots[:, 1::2].clip(min=0, max=h - 1)
+        annots -= [x, y, x, y, 0]
+
+        annots[:, 0] = annots[:, 0].clip(min=0, max=w - 1)
+        annots[:, 2] = annots[:, 2].clip(min=0, max=w - 1)
+        annots[:, 1::2] = annots[:, 1::2].clip(min=0, max=h - 1)
 
         return {'img': img, 'annot': torch.tensor(annots)}
 
@@ -142,32 +146,33 @@ class CenterCrop(object):
         j = int(round((w - ow) / 2.))
         img = img.crop((j, i, j + ow, i + oh))
         annots -= [j, i, j, i, 0]
-        annots[:, 0::2].clip(min=0, max=ow - 1)
-        annots[:, 1::2].clip(min=0, max=oh - 1)
+        annots[:, 0] = annots[:, 0].clip(min=0, max=ow - 1)
+        annots[:, 2] = annots[:, 2].clip(min=0, max=ow - 1)
+        annots[:, 1::2] = annots[:, 1::2].clip(min=0, max=oh - 1)
 
         return {'img': img, 'annot': torch.tensor(annots)}
 
 
+class RandomHorizonFlip(object):
+    """Randomly flip the given PIL Image."""
+    def __init__(self):
 
-def random_flip(img, boxes):
-    '''Randomly flip the given PIL Image.
+        pass
 
-    Args:
-        img: (PIL Image) image to be flipped.
-        boxes: (tensor) object boxes, sized [#ojb,4].
+    def __call__(self, sample):
 
-    Returns:
-        img: (PIL.Image) randomly flipped image.
-        boxes: (tensor) randomly flipped boxes.
-    '''
-    if random.random() < 0.5:
-        img = img.transpose(Image.FLIP_LEFT_RIGHT)
-        w = img.width
-        xmin = w - boxes[:,2]
-        xmax = w - boxes[:,0]
-        boxes[:,0] = xmin
-        boxes[:,2] = xmax
-    return img, boxes
+        img, annots = sample['img'], sample['annot']
+
+        if random.random() < 0.5:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            w = img.width
+            xmin = w - annots[:, 2]
+            xmax = w - annots[:, 0]
+            annots[:, 0] = xmin
+            annots[:, 2] = xmax
+
+        return {'img': img, 'annot': torch.tensor(annots)}
+
 
 def test():
     from data.dataset import VOCDataset
@@ -175,23 +180,25 @@ def test():
     from utils.tools import draw_boxes
 
     # img = Image.open('/media/alex/AC6A2BDB6A2BA0D6/alex_dataset/pascal_voc/test/VOC2007/JPEGImages/000001.jpg')
-    # boxes = torch.Tensor([[48, 240, 195, 371], [8, 12, 352, 498]])
-    # img, boxes = random_crop(img, boxes)
-    # print(img.size)
 
     voc_dataset = VOCDataset(args.train_data, num_classes=20)
-    sample = voc_dataset[2]
+    sample = voc_dataset[7]
 
     random_crop = RandomCrop()
+    random_flip  = RandomHorizonFlip()
+    resize = Resizer(min_side=608)
 
     crop_sample = random_crop(sample)
-    # resize = Resizer(min_side=608)
-    #
-    # resize_sample = resize(sample)
-    print(crop_sample['img'].size)
+    flip_sample = random_flip(crop_sample)
+    resize_sample = resize(flip_sample)
 
-    img = draw_boxes(crop_sample['img'], crop_sample['annot'][:, :4])
-    img.show()
+
+    resize_img = draw_boxes(resize_sample['img'], resize_sample['annot'][:, :4])
+    print(resize_sample['img'].size, resize_sample['annot'][:, :4])
+    resize_img.show()
+
+    print(np.array(resize_sample['img'].new(mode='F')))
+
 
 
 if __name__ == "__main__":
