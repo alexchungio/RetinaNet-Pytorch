@@ -23,7 +23,7 @@ import torchvision.transforms as transforms
 class Resizer(object):
     """Convert ndarrays in sample to Tensors."""
 
-    def __init__(self, min_side, max_side=1000, interpolation=Image.BILINEAR):
+    def __init__(self, min_side=608, max_side=1000, interpolation=Image.BILINEAR):
         """
 
         :param sample:
@@ -176,7 +176,7 @@ class RandomHorizonFlip(object):
 
 class Normalizer(object):
 
-    def __init__(self, mean, std):
+    def __init__(self, mean=None, std=None):
         if mean == None:
             self.mean = torch.tensor([[[0.485, 0.456, 0.406]]])
         else:
@@ -225,9 +225,6 @@ def test():
     resize_img.show()
 
     print('Done')
-
-
-
 
 
 if __name__ == "__main__":

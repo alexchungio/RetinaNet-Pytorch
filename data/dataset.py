@@ -20,9 +20,8 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 
-
 from configs.cfgs import args
-from utils.tools import read_class_names, draw_boxes
+
 
 class CocoDataset(Dataset):
     """Coco dataset."""
@@ -172,7 +171,7 @@ class VOCDataset(Dataset):
         annot = self.annotations[idx]
         sample = {'img': img, 'annot': annot}
         if self.transform:
-            img, bbox, label = self.transform(sample, self.is_training)
+            sample = self.transform(sample)
 
         return sample
 
@@ -245,10 +244,15 @@ class VOCDataset(Dataset):
 
         return images, annotations
 
+    def image_aspect_ratio(self, image_index):
+        image = Image.open(self.names[image_index])
+        return float(image.width) / float(image.height)
+
 
 def collate_fn(data):
     """
     ensure images remains the same shape in one batch
+    permute images axis from [N, H, W, C] to [N, C, H, W]
     :param data:
     :return:
     """
@@ -288,17 +292,41 @@ def collate_fn(data):
     return {'img': padded_imgs, 'annot': annot_padded, 'scale': scales}
 
 
-if __name__ == "__main__":
-
+def test():
     # coco_dataset = '/media/alex/AC6A2BDB6A2BA0D6/alex_dataset/COCO_2017'
     # coco_dataset = CocoDataset(coco_dataset)
     # sample = coco_dataset[0]
+    from utils.tools import read_class_names, draw_boxes
+    from data.transforms import RandomCrop, RandomHorizonFlip, Resizer, Normalizer
+    from data.sample import AspectRatioBasedSampler
+    from utils.tools import UnNormalizer
 
-    voc_dataset = VOCDataset(args.train_data, num_classes=20)
+    test_transform = torchvision.transforms.Compose([RandomCrop(), RandomHorizonFlip(), Resizer(), Normalizer()])
 
-    sample = voc_dataset[5]
-    img = draw_boxes(sample['img'], sample['annot'][:, :4])
-    img.show()
+    voc_dataset = VOCDataset(args.test_data, num_classes=20, transform=test_transform)
+
+    sampler = AspectRatioBasedSampler(voc_dataset, batch_size=2, drop_last=False)
+
+    voc_dataloader = DataLoader(voc_dataset, num_workers=3, collate_fn=collate_fn, batch_sampler=sampler)
+
+    # img = draw_boxes(sample['img'], sample['annot'][:, :4])
+    # img.show()
+    unnormalizer = UnNormalizer() # un normalizer image
+    unloader = transforms.ToPILImage()   # tensor to image
+    for index, sample in enumerate(voc_dataloader):
+        img_tensor = sample['img']
+        img_annot = sample['annot']
+
+        img = unnormalizer(img_tensor[0])
+        annot = img_annot[0]
+        img = unloader(img)
+        box_img = draw_boxes(img, annot[:, :4])
+        box_img.show()
+        break
 
     print('Done')
+
+
+if __name__ == "__main__":
+    test()
 
