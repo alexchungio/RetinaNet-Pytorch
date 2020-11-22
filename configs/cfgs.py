@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#------------------------------------------------------
+# @ File       : cfgs.py
+# @ Description:  
+# @ Author     : Alex Chung
+# @ Contact    : yonganzhong@outlook.com
+# @ License    : Copyright (c) 2017-2018
+# @ Time       : 2020/11/18 下午2:39
+# @ Software   : PyCharm
+#-------------------------------------------------------
+
+import os
+import argparse
+
+
+# Root Path
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# ROOT_PATH = sys.path(__file__)
+print(ROOT_PATH)
+print (20*"++--")
+
+# Parse arguments
+parser = argparse.ArgumentParser(description= 'PyTorch RetinaNet Training')
+
+# Dataset
+
+parser.add_argument('--dataset', default='pascal', choices=['coco', 'pascal'], type=str)
+
+parser.add_argument('--dataset_path', default='/media/alex/AC6A2BDB6A2BA0D6/alex_dataset/pascal_voc', help='dataset path')
+
+parser.add_argument('--classes', default=os.path.join(ROOT_PATH, 'data', 'classes', '{}.names'.format('voc')),
+                    choices=['coco', 'voc'], type=str, help='classes name path')
+
+parser.add_argument('-train', '--train_data', default=os.path.join(ROOT_PATH, 'data', 'annotation', 'voc_train.txt'), type=str)
+parser.add_argument('-test', '--test_data', default=os.path.join(ROOT_PATH, 'data', 'annotation', 'voc_test.txt'), type=str)
+
+# Checkpoints
+parser.add_argument('-c', '--checkpoint', default=os.path.join(ROOT_PATH, 'outputs', 'weights', 'ckpt.pth.tar'), type=str, metavar='PATH',
+                    help='path to save checkpoint (default: checkpoint)')
+
+parser.add_argument('--best_checkpoint', default=os.path.join(ROOT_PATH, 'outputs', 'weights', 'best_ckpt.pth.tar'),
+                    type=str, metavar='PATH',  help='path to save best checkpoint (default: checkpoint)')
+
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                    help='resume the train log info')
+# Logs
+parser.add_argument('-s', '--summary', default=os.path.join(ROOT_PATH, 'outputs', 'summary'), type=str, metavar='PATH',
+                    help='path to save logs (default: logs)')
+parser.add_argument('--summary_iter', default=100, type=int, help='number of iterator to save logs (default: 1)')
+
+# Train
+parser.add_argument('--epochs', default=100, type=int, metavar='N',
+                    help='number of total epochs to run')
+parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
+                    help='manual epoch number (useful at restart)')
+
+parser.add_argument('--num_classes', default=6, type=int, metavar='N',
+                    help='number of classification of image')
+parser.add_argument('--image_size', default=224, type=int, metavar='N',
+                    help='train and val image size')
+parser.add_argument('--batch_size', default=6, type=int, metavar='N',
+                    help='train batch size (default: 256)')
+
+
+# LR
+parser.add_argument('--lr', '--learning_rate', default=0.001, type=float,
+                    metavar='LR', help='initial learning rate，1e-2， 1e-4, 0.001')
+
+parser.add_argument('--lr_times', '--lr_accelerate_times', default=5, type=int,
+                    metavar='LR', help='custom layer lr accelerate times')
+
+parser.add_argument('--schedule', type=int, nargs='+', default=[100, 150],
+                        help='Decrease learning rate at these epochs.')
+parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
+
+
+# Optimizer
+parser.add_argument('--optimizer', default='sgd',
+                         choices=['sgd', 'rmsprop', 'adam', 'AdaBound', 'radam'], metavar='N',
+                         help='optimizer (default=sgd)')
+
+parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                    help='momentum')
+parser.add_argument('--use_nesterov', default=False, dest='nesterov',
+                         action='store_false',
+                         help='do not use Nesterov momentum for SGD')
+
+parser.add_argument('--drop', '--dropout', default=0, type=float,
+                    metavar='Dropout', help='Dropout ratio')
+
+parser.add_argument('--alpha', default=0.99, type=float, metavar='M',
+                         help='alpha for RMSprop (default: 0.99)')
+parser.add_argument('--beta1', default=0.9, type=float, metavar='M',
+                         help='beta1 for Adam (default: 0.9)')
+parser.add_argument('--beta2', default=0.999, type=float, metavar='M',
+                         help='beta2 for Adam (default: 0.999)')
+parser.add_argument('--weight_decay', '--wd', default=1e-4, type=float,
+                    metavar='W', help='weight decay (default: 1e-4)')
+
+parser.add_argument('--mixup', default=True, type=bool,help='use mixup training strategy')
+parser.add_argument('--mixup_alpha', default=0.2, type=float,help='mixup parameter setting')
+
+
+# Architecture
+
+parser.add_argument('--depth', type=int, default=29, help='Model depth.')
+parser.add_argument('--cardinality', type=int, default=32, help='ResNet cardinality (group).')
+parser.add_argument('--base_width', type=int, default=4, help='ResNet base width.')
+parser.add_argument('--widen_factor', type=int, default=4, help='Widen factor. 4 -> 64, 8 -> 128, ...')
+
+# Misc
+parser.add_argument('--manual_seed', type=int, help='manual seed')
+parser.add_argument('--evaluate', dest='evaluate', action='store_true',
+                    help='evaluate model on validation set')
+parser.add_argument('--pretrained', default=True, dest='pretrained', action='store_true',
+                    help='use pre-trained model')
+parser.add_argument('--test_path', default=os.path.join(ROOT_PATH, 'outputs', 'answer.csv'), type=str, metavar='PATH',
+                    help='resume the train log info')
+
+# Device setting
+parser.add_argument('--gpu-id', default='0', type=str,
+                    help='id(s) for CUDA_VISIBLE_DEVICES')
+
+args = parser.parse_args()
+
+
+if __name__ == "__main__":
+    print(args.nesterov)
