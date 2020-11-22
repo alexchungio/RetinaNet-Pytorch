@@ -298,7 +298,7 @@ def test():
     # sample = coco_dataset[0]
     from utils.tools import read_class_names, draw_boxes
     from data.transforms import RandomCrop, RandomHorizonFlip, Resizer, Normalizer
-    from data.sample import AspectRatioBasedSampler
+    from data.sampler import AspectRatioBasedSampler
     from utils.tools import UnNormalizer
 
     test_transform = torchvision.transforms.Compose([RandomCrop(), RandomHorizonFlip(), Resizer(), Normalizer()])
